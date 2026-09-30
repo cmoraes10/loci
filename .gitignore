@@ -57,3 +57,6 @@ pyrightconfig.json
 *.log
 *.sqlite
 *.db
+
+# Claude Code session files — transcripts and local settings are not project artifacts
+.claude/
