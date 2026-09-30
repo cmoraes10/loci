@@ -39,6 +39,9 @@ def make(key: str, importance=Importance.MEDIUM, **kw) -> Memory:
     )
 
 
+# --- Memory shape ---
+
+
 def test_content_is_clamped():
     assert len(make("k", content="x" * 500).content) == 220
 
@@ -56,6 +59,9 @@ def test_merge_keeps_the_stronger_importance(store):
     assert merged.importance is Importance.CRITICAL
 
 
+# --- Ranking and injection ---
+
+
 def test_select_caps_and_orders_by_importance():
     memories = [make(f"low{i}", Importance.LOW) for i in range(20)]
     memories += [make("crit", Importance.CRITICAL)]
@@ -70,9 +76,30 @@ def test_expired_never_reaches_the_model():
     assert "gone" not in context_block([live, gone])
 
 
+# --- Write filter ---
+
+
 def test_write_filter_drops_short_low_value_facts():
     assert not should_persist(make("k", Importance.LOW, content="ok"))
     assert should_persist(make("k", Importance.CRITICAL, content="ok"))
+
+
+def test_passing_mood_is_not_stored():
+    """The case the write filter exists for."""
+    assert not should_persist(make("k", Importance.MEDIUM, content="estou cansado hoje"))
+    assert not should_persist(make("k", Importance.LOW, content="feeling tired today"))
+
+
+def test_a_stated_fact_that_merely_mentions_today_is_kept():
+    assert should_persist(make("k", Importance.MEDIUM, content="hoje decidi migrar para Postgres"))
+
+
+def test_the_person_outranks_the_heuristic():
+    """Critical and high pass even when they look like passing mood."""
+    assert should_persist(make("k", Importance.HIGH, content="estou cansado hoje"))
+
+
+# --- Heuristics: existing patterns ---
 
 
 def test_heuristics_find_a_stated_preference():
@@ -87,6 +114,130 @@ def test_model_wins_over_heuristic_on_the_same_key():
     merged = merge_paths([model], [heuristic])
     assert len(merged) == 1
     assert merged[0].content == "versao do modelo"
+
+
+# --- Heuristics: decisions ---
+
+
+def test_heuristic_decision_pt():
+    found = heuristic_extract("decidi migrar o banco para Postgres essa semana")
+    assert found and found[0].category is Category.GOALS
+    assert found[0].importance is Importance.HIGH
+
+
+def test_heuristic_decision_en():
+    found = heuristic_extract("I decided to switch to TypeScript for this project")
+    assert found and found[0].category is Category.GOALS
+
+
+# --- Heuristics: constraints ---
+
+
+def test_heuristic_hard_constraint_pt():
+    found = heuristic_extract("não posso usar dependências externas no núcleo")
+    assert found and found[0].category is Category.CONSTRAINTS
+    assert found[0].importance is Importance.HIGH
+
+
+def test_heuristic_hard_constraint_en():
+    found = heuristic_extract("I can't use any external libraries in the core module")
+    assert found and found[0].category is Category.CONSTRAINTS
+
+
+def test_heuristic_soft_constraint_pt():
+    found = heuristic_extract("tenho que entregar antes de sexta")
+    assert found and found[0].category is Category.CONSTRAINTS
+
+
+# --- Heuristics: deadlines ---
+
+
+def test_heuristic_deadline_pt():
+    found = heuristic_extract("meu prazo é dia 15 de outubro")
+    assert found and found[0].category is Category.GOALS
+    assert found[0].importance is Importance.HIGH
+
+
+def test_heuristic_deadline_en():
+    found = heuristic_extract("deadline for the release is November 1st")
+    assert found and found[0].category is Category.GOALS
+
+
+# --- Heuristics: goals ---
+
+
+def test_heuristic_goal_pt():
+    found = heuristic_extract("meu objetivo é lançar em produção até dezembro")
+    assert found and found[0].category is Category.GOALS
+
+
+def test_heuristic_goal_en():
+    found = heuristic_extract("I want to ship the first version by end of year")
+    assert found and found[0].category is Category.GOALS
+
+
+# --- Heuristics: routines ---
+
+
+def test_heuristic_routine_pt():
+    found = heuristic_extract("sempre reviso o código antes de fazer merge")
+    assert found and found[0].category is Category.ROUTINE
+
+
+def test_heuristic_routine_en():
+    found = heuristic_extract("I always run the tests before pushing")
+    assert found and found[0].category is Category.ROUTINE
+
+
+# --- Heuristics: preferences (English path) ---
+
+
+def test_heuristic_preference_en():
+    found = heuristic_extract("I prefer short, direct answers")
+    assert found and found[0].category is Category.PREFERENCES
+
+
+# --- Heuristics: finance ---
+
+
+def test_heuristic_finance_pt():
+    found = heuristic_extract("meu orçamento para infraestrutura é R$ 500 por mês")
+    assert found and found[0].category is Category.FINANCE
+    assert found[0].importance is Importance.HIGH
+
+
+def test_heuristic_finance_en():
+    found = heuristic_extract("my budget for this project is around $2000")
+    assert found and found[0].category is Category.FINANCE
+
+
+# --- Heuristics: study ---
+
+
+def test_heuristic_study_pt():
+    found = heuristic_extract("estou estudando machine learning pelo fast.ai")
+    assert found and found[0].category is Category.STUDY
+
+
+def test_heuristic_study_en():
+    found = heuristic_extract("I'm learning Rust through the official book")
+    assert found and found[0].category is Category.STUDY
+
+
+# --- Heuristics: relationships ---
+
+
+def test_heuristic_relationship_pt():
+    found = heuristic_extract("meu chefe não gosta de reuniões longas")
+    assert found and found[0].category is Category.RELATIONSHIPS
+
+
+def test_heuristic_relationship_en():
+    found = heuristic_extract("my boss prefers async communication over meetings")
+    assert found and found[0].category is Category.RELATIONSHIPS
+
+
+# --- Lifecycle ---
 
 
 def test_consolidate_removes_exact_duplicates(store):
@@ -107,18 +258,3 @@ def test_decay_expires_an_unconfirmed_hypothesis(store):
 def test_decay_leaves_a_confirmed_fact_alone(store):
     store.upsert(make("solid", status=Status.ACTIVE))
     assert decay(store) == 0
-
-
-def test_passing_mood_is_not_stored():
-    """The case the write filter exists for."""
-    assert not should_persist(make("k", Importance.MEDIUM, content="estou cansado hoje"))
-    assert not should_persist(make("k", Importance.LOW, content="feeling tired today"))
-
-
-def test_a_stated_fact_that_merely_mentions_today_is_kept():
-    assert should_persist(make("k", Importance.MEDIUM, content="hoje decidi migrar para Postgres"))
-
-
-def test_the_person_outranks_the_heuristic():
-    """Critical and high pass even when they look like passing mood."""
-    assert should_persist(make("k", Importance.HIGH, content="estou cansado hoje"))

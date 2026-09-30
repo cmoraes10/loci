@@ -10,6 +10,9 @@ requires-python = ">=3.11"
 license = "MIT"
 dependencies = []
 
+[project.scripts]
+loci-maintenance = "loci.cli:main"
+
 [project.optional-dependencies]
 mcp = ["mcp>=1.2"]
 dev = ["pytest>=8"]

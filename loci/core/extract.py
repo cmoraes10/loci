@@ -17,12 +17,81 @@ from .models import Category, Importance, Memory, Source, Status
 #: Injected, never imported: the core holds no API key and no provider SDK.
 ModelExtractor = Callable[[str, str], list[Memory]]
 
+# Each tuple is (pattern, category, importance). Group 1 is the captured phrase
+# used to generate a stable key; group 0 is stored as the memory content.
+#
+# Ordering matters: more specific patterns first, so a sentence like
+# "decidi que meu prazo é sexta" hits GOALS via "decidi", not via "prazo".
 HEURISTICS: list[tuple[str, Category, Importance]] = [
-    (r"\b(?:eu )?(?:prefiro|gosto de|odeio|detesto)\s+(.{4,80})", Category.PREFERENCES, Importance.MEDIUM),
-    (r"\b(?:sempre|nunca)\s+(.{4,80})", Category.ROUTINE, Importance.MEDIUM),
-    (r"\b(?:decidi|escolhi|vamos de)\s+(.{4,80})", Category.GOALS, Importance.HIGH),
-    (r"\b(?:n[ãa]o posso|estou impedido de|tenho que)\s+(.{4,80})", Category.CONSTRAINTS, Importance.HIGH),
-    (r"\b(?:meu prazo|deadline|entrego)\s+(.{4,80})", Category.GOALS, Importance.HIGH),
+
+    # Decisions — the person committed to something.
+    (
+        r"\b(?:decidi|escolhi|vou de|optei por|resolvi|I decided|I chose|I'm going with|I opted for)\s+(.{4,80})",
+        Category.GOALS, Importance.HIGH,
+    ),
+
+    # Hard constraints — what the person cannot or must do.
+    (
+        r"\b(?:n[ãa]o posso|n[ãa]o consigo|estou impedido de|tenho que obrigatoriamente"
+        r"|I can't|I cannot|I'm not allowed to|I must|I'm required to)\s+(.{4,80})",
+        Category.CONSTRAINTS, Importance.HIGH,
+    ),
+
+    # Soft constraints — what the person needs or is obligated to do.
+    (
+        r"\b(?:tenho que|preciso|sou obrigado a|I need to|I have to|I'm obligated to)\s+(.{4,80})",
+        Category.CONSTRAINTS, Importance.MEDIUM,
+    ),
+
+    # Deadlines and due dates.
+    (
+        r"\b(?:meu prazo|minha entrega|deadline|due by|due on|precisa estar pronto|entrego)\s+(.{4,80})",
+        Category.GOALS, Importance.HIGH,
+    ),
+
+    # Goals and intentions that are not yet decisions.
+    (
+        r"\b(?:meu objetivo|minha meta|quero|planejo|pretendo|my goal is|my target is"
+        r"|I want to|I plan to|I'm planning to|I intend to)\s+(.{4,80})",
+        Category.GOALS, Importance.MEDIUM,
+    ),
+
+    # Preferences — likes and dislikes.
+    (
+        r"\b(?:eu )?(?:prefiro|gosto de|adoro|amo|odeio|detesto|n[ãa]o gosto de"
+        r"|I prefer|I like|I love|I hate|I dislike|I can't stand)\s+(.{4,80})",
+        Category.PREFERENCES, Importance.MEDIUM,
+    ),
+
+    # Routines — habitual actions.
+    (
+        r"\b(?:sempre|nunca|todo dia|toda semana|geralmente|costumo|normalmente"
+        r"|I always|I never|every day|every week|I usually|I typically|I regularly)\s+(.{4,80})",
+        Category.ROUTINE, Importance.MEDIUM,
+    ),
+
+    # Finance — income, budget, spending.
+    (
+        r"\b(?:ganho|gasto|economizo|meu or[çc]amento|meu sal[áa]rio|minha renda"
+        r"|I earn|I spend|I save|my budget|my salary|my income)\s+(.{4,80})",
+        Category.FINANCE, Importance.HIGH,
+    ),
+
+    # Study — active learning or courses.
+    (
+        r"\b(?:estou estudando|estou aprendendo|fa[çc]o curso de|estou fazendo|matriculei"
+        r"|I'm studying|I'm learning|I'm taking a course|I enrolled in)\s+(.{4,80})",
+        Category.STUDY, Importance.MEDIUM,
+    ),
+
+    # Relationships — named people in the person's life.
+    (
+        r"\b(?:meu pai|minha m[ãa]e|meu filho|minha filha|meu irm[ãa]o|minha irm[ãa]"
+        r"|meu chefe|minha chefe|meu namorado|minha namorada|meu marido|minha esposa"
+        r"|my father|my mother|my son|my daughter|my brother|my sister"
+        r"|my boss|my partner|my husband|my wife|my colleague)\s+(.{4,60})",
+        Category.RELATIONSHIPS, Importance.MEDIUM,
+    ),
 ]
 
 

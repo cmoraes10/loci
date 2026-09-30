@@ -1,0 +1,36 @@
+"""Entry point for the daily maintenance jobs.
+
+Designed to be called by cron, s6, systemd, or any scheduler — one command,
+two jobs, exits with the count of changes made. Zero means the store was clean.
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+
+from .core.lifecycle import consolidate, decay
+from .core.store import Store
+
+
+def run_maintenance(db_path: str | None = None) -> int:
+    path = db_path or os.environ.get("LOCI_DB", "~/.loci/memory.db")
+    store = Store(path)
+
+    merged = consolidate(store)
+    expired = decay(store)
+    total = merged + expired
+
+    if total:
+        print(f"loci maintenance: {merged} merged, {expired} expired")
+    return total
+
+
+def main() -> None:
+    # Accept an optional path argument so cron entries can point at a specific db.
+    db = sys.argv[1] if len(sys.argv) > 1 else None
+    sys.exit(0 if run_maintenance(db) >= 0 else 1)
+
+
+if __name__ == "__main__":
+    main()
