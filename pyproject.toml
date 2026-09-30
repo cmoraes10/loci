@@ -1,0 +1,19 @@
+[project]
+name = "loci"
+version = "0.1.0"
+description = "Typed long-term memory for AI agents — one core, an MCP server and a Hermes plugin"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = []
+
+[project.optional-dependencies]
+mcp = ["mcp>=1.2"]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["core*", "adapters*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

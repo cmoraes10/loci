@@ -1,0 +1,12 @@
+name: loci
+version: 0.1.0
+description: Typed long-term memory for the agent — durable facts extracted after each turn, consolidated daily, injected by importance
+kind: backend
+provides_tools:
+  - remember
+  - recall
+  - forget
+provides_hooks:
+  - pre_llm_call
+  - post_llm_call
+python_dependencies: []
