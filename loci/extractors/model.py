@@ -39,8 +39,7 @@ from loci.core.models import Category, Importance, Memory, Source, Status
 
 _SYSTEM = """\
 You are a memory extraction assistant. Given a conversation exchange, identify
-facts worth remembering long-term about the user — preferences, decisions,
-constraints, goals, relationships, routines. Skip passing mood and small talk.
+facts worth remembering long-term about the user.
 
 Respond with valid JSON only, no markdown fences, using this exact shape:
 {"facts": [{"key": "unique_slug_under_48_chars", "title": "Short label (max 80 chars)", "content": "Full statement as a sentence (max 220 chars)", "category": "preferences", "importance": "medium"}]}
@@ -48,11 +47,77 @@ Respond with valid JSON only, no markdown fences, using this exact shape:
 Valid category values: routine, study, preferences, finance, goals, relationships, constraints, ephemeral
 Valid importance values: critical, high, medium, low
 
-Return at most 4 facts. If nothing is worth remembering, return {"facts": []}.
+Importance levels:
+  critical — health constraints (allergies, medical conditions, dietary restrictions), safety-critical facts
+  high — active goals, financial rules, relationships, declared routines; every RELATIONSHIPS or CONSTRAINTS item is at least high
+  medium — general preferences, context details, supporting facts
+  low — background details unlikely to affect future responses
+
+Category-specific guidance:
+
+finance — store the TYPE of fact, never exact monetary amounts:
+  monthly_income: user has regular income (salary, freelance, pension)
+  recurring_expense: fixed monthly cost (rent, phone plan, subscription)
+  budget_preference: declared spending limit, savings target, or budget rule
+
+relationships — use stable gender-neutral keys so updates overwrite prior versions:
+  partner_romantic: romantic partner (girlfriend or boyfriend)
+  spouse: husband or wife
+  child_mentioned: son or daughter
+  parent_mentioned: mother or father
+  friend_close: named close friend explicitly mentioned
+  colleague_key: named important colleague or manager
+
+constraints — health facts are always critical importance:
+  health_allergy: declared food or medication allergy
+  health_condition: chronic condition (diabetes, hypertension, anxiety, depression)
+  dietary_restriction: vegan, vegetarian, gluten-free, lactose-free
+
+preferences:
+  work_context: job, profession, work modality (remote/on-site)
+  hobby_interest: declared hobbies or leisure activities
+  communication_style: how this user writes — tone, slang, casing, abbreviations.
+    Extract only when you observe three or more clear, consistent markers in the same turn.
+
+goals:
+  active_goal: immediate goal the user declared
+  career_aspiration: desired future job, career change, or entrepreneurship
+
+ephemeral — passing states only, always low importance, TTL 24h.
+  If the same state repeats for 5+ consecutive days, reclassify as routine.
+
+General rules:
+  Return at most 4 facts. If nothing durable exists, return {"facts": []}.
+  Skip passing mood, small talk, one-off logistics, and temporary requests.
+  If the user asks to forget or delete something, do NOT extract that fact.
+  Never store passwords, tokens, access codes, full card or account numbers, or sensitive PII.
+  For the same category and key, write updated content — do not create a parallel entry.
 """
 
 _VALID_CATEGORIES = {c.value for c in Category}
 _VALID_IMPORTANCE = {i.value for i in Importance}
+
+# Minimum importance floors by category and by special key.
+# RELATIONSHIPS and CONSTRAINTS carry facts people act on — dropping them to
+# medium/low means the context cap can silently push them out of the block.
+_CATEGORY_FLOOR: dict[str, Importance] = {
+    Category.RELATIONSHIPS.value: Importance.HIGH,
+    Category.CONSTRAINTS.value: Importance.HIGH,
+}
+# communication_style guides every turn's tone — it must reach the context block.
+_KEY_FLOOR: dict[str, Importance] = {
+    "communication_style": Importance.HIGH,
+}
+
+
+def _enforce_min_importance(category: Category, importance: Importance, key: str) -> Importance:
+    floor = _CATEGORY_FLOOR.get(category.value)
+    if floor and importance.rank > floor.rank:
+        importance = floor
+    key_floor = _KEY_FLOOR.get(key)
+    if key_floor and importance.rank > key_floor.rank:
+        importance = key_floor
+    return importance
 
 
 @dataclass
@@ -105,15 +170,17 @@ def _parse(raw: dict[str, Any]) -> list[Memory]:
     memories: list[Memory] = []
     for f in facts[:4]:
         try:
-            category = f["category"] if f.get("category") in _VALID_CATEGORIES else "preferences"
-            importance = f["importance"] if f.get("importance") in _VALID_IMPORTANCE else "medium"
+            cat = Category(f["category"] if f.get("category") in _VALID_CATEGORIES else "preferences")
+            imp = Importance(f["importance"] if f.get("importance") in _VALID_IMPORTANCE else "medium")
+            key = str(f.get("key", ""))[:48] or "model_fact"
+            imp = _enforce_min_importance(cat, imp, key)
             memories.append(
                 Memory(
-                    key=str(f.get("key", ""))[:48] or "model_fact",
+                    key=key,
                     title=str(f.get("title", ""))[:80],
                     content=str(f.get("content", ""))[:220],
-                    category=Category(category),
-                    importance=Importance(importance),
+                    category=cat,
+                    importance=imp,
                     source=Source.ASSISTANT_INFERENCE,
                     status=Status.HYPOTHESIS,
                     confidence=0.8,

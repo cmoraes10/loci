@@ -92,6 +92,31 @@ HEURISTICS: list[tuple[str, Category, Importance]] = [
         r"|my boss|my partner|my husband|my wife|my colleague)\s+(.{4,60})",
         Category.RELATIONSHIPS, Importance.MEDIUM,
     ),
+
+    # Health — allergies. CRITICAL because every meal and medication recommendation
+    # must account for this; a false negative here has real consequences.
+    (
+        r"\b(?:sou al[eé]rgic[oa]|tenho alergia|alergia a"
+        r"|I'?m allergic|I have an? allergy|allergic to)\s+(.{3,80})",
+        Category.CONSTRAINTS, Importance.CRITICAL,
+    ),
+
+    # Health — chronic conditions. CRITICAL for the same reason: permanent context
+    # the model must never ignore when advising on food, exercise, or medication.
+    (
+        r"\b(tenho diabetes|sou diab[eé]tic[oa]|tenho press[ãa]o alta|tenho hipertens[ãa]o"
+        r"|tenho ansiedade|tenho depress[ãa]o|sou cel[íi]ac[oa]|tenho intoler[aâ]ncia"
+        r"|I have diabetes|I'?m diabetic|I have high blood pressure|I have hypertension"
+        r"|I have anxiety|I have depression|I'?m celiac|I have (?:a )?(?:food |chronic )?intolerance)\b",
+        Category.CONSTRAINTS, Importance.CRITICAL,
+    ),
+
+    # Health — dietary restrictions. Same CRITICAL weight as allergies in practice.
+    (
+        r"\b(n[ãa]o como carne|sou vegano|sou vegetarian[oa]|sem lactose|sem gl[úu]ten"
+        r"|I don'?t eat meat|I'?m vegan|I'?m vegetarian|lactose[- ]?free|gluten[- ]?free)\b",
+        Category.CONSTRAINTS, Importance.CRITICAL,
+    ),
 ]
 
 

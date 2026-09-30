@@ -3,12 +3,12 @@
 from .extract import extract, heuristic_extract, merge_paths
 from .lifecycle import consolidate, decay
 from .models import Category, Importance, Memory, Source, Status
-from .rank import context_block, is_passing_state, select, should_persist
+from .rank import context_block, is_passing_state, is_safe, review_block, select, should_persist
 from .store import Store
 
 __all__ = [
     "Category", "Importance", "Memory", "Source", "Status", "Store",
     "extract", "heuristic_extract", "merge_paths",
     "consolidate", "decay",
-    "context_block", "is_passing_state", "select", "should_persist",
+    "context_block", "review_block", "is_passing_state", "is_safe", "select", "should_persist",
 ]
