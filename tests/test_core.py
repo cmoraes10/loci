@@ -1,10 +1,10 @@
 """Tests run against the real store, on a temp file. No mocks of our own code."""
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 
 import pytest
 
-from core import (
+from loci import (
     Category,
     Importance,
     Memory,
@@ -15,6 +15,7 @@ from core import (
     context_block,
     decay,
     heuristic_extract,
+    is_passing_state,
     merge_paths,
     select,
     should_persist,
@@ -106,3 +107,18 @@ def test_decay_expires_an_unconfirmed_hypothesis(store):
 def test_decay_leaves_a_confirmed_fact_alone(store):
     store.upsert(make("solid", status=Status.ACTIVE))
     assert decay(store) == 0
+
+
+def test_passing_mood_is_not_stored():
+    """The case the write filter exists for."""
+    assert not should_persist(make("k", Importance.MEDIUM, content="estou cansado hoje"))
+    assert not should_persist(make("k", Importance.LOW, content="feeling tired today"))
+
+
+def test_a_stated_fact_that_merely_mentions_today_is_kept():
+    assert should_persist(make("k", Importance.MEDIUM, content="hoje decidi migrar para Postgres"))
+
+
+def test_the_person_outranks_the_heuristic():
+    """Critical and high pass even when they look like passing mood."""
+    assert should_persist(make("k", Importance.HIGH, content="estou cansado hoje"))

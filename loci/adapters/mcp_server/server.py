@@ -16,7 +16,7 @@ import os
 
 from mcp.server.fastmcp import FastMCP
 
-from core import Category, Importance, Memory, Source, Store, context_block, should_persist
+from loci import Category, Importance, Memory, Source, Store, context_block, should_persist
 
 mcp = FastMCP("loci")
 store = Store(os.environ.get("LOCI_DB", "~/.loci/memory.db"))

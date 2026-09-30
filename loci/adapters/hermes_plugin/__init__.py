@@ -12,7 +12,7 @@ import json
 import os
 import threading
 
-from core import (
+from loci import (
     Category,
     Importance,
     Memory,
@@ -26,7 +26,7 @@ from core import (
 _store = Store(os.environ.get("LOCI_DB", "~/.loci/memory.db"))
 
 
-def _remember(args: dict, **kwargs) -> str:
+def _remember(args: dict, **_kwargs) -> str:
     try:
         memory = Memory(
             key=f"{args['category']}_{abs(hash(args['content'])) % 10**10}",
@@ -45,12 +45,12 @@ def _remember(args: dict, **kwargs) -> str:
     return json.dumps({"ok": True, "key": _store.upsert(memory).key})
 
 
-def _recall(args: dict, **kwargs) -> str:
+def _recall(args: dict, **_kwargs) -> str:
     found = _store.search(args["query"]) if args.get("query") else _store.active()
     return json.dumps({"ok": True, "context": context_block(found)})
 
 
-def _forget(args: dict, **kwargs) -> str:
+def _forget(args: dict, **_kwargs) -> str:
     return json.dumps({"ok": True, "removed": _store.forget(args.get("key", ""))})
 
 
@@ -91,8 +91,8 @@ FORGET_SCHEMA = {"type": "object", "properties": {"key": {"type": "string"}}, "r
 
 
 def register(ctx) -> None:
-    ctx.register_tool(name="remember", toolset="mnemo", schema=REMEMBER_SCHEMA, handler=_remember)
-    ctx.register_tool(name="recall", toolset="mnemo", schema=RECALL_SCHEMA, handler=_recall)
-    ctx.register_tool(name="forget", toolset="mnemo", schema=FORGET_SCHEMA, handler=_forget)
+    ctx.register_tool(name="remember", toolset="loci", schema=REMEMBER_SCHEMA, handler=_remember)
+    ctx.register_tool(name="recall", toolset="loci", schema=RECALL_SCHEMA, handler=_recall)
+    ctx.register_tool(name="forget", toolset="loci", schema=FORGET_SCHEMA, handler=_forget)
     ctx.register_hook("pre_llm_call", _inject_context)
     ctx.register_hook("post_llm_call", _extract_async)

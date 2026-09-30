@@ -7,9 +7,24 @@ conversation needs.
 
 from __future__ import annotations
 
-from .models import Importance, Memory, Status
+import re
+
+from .models import Category, Importance, Memory, Status
 
 DEFAULT_CAP = 12
+
+#: A moment word next to a feeling word is a state, not a fact about someone.
+_MOMENT = re.compile(r"\b(hoje|agora|ontem|today|right now|tonight)\b", re.IGNORECASE)
+_FEELING = re.compile(
+    r"\b(cansad|ansios|triste|feliz|animad|estressad|desanimad|irritad"
+    r"|tired|anxious|sad|happy|excited|stressed|angry|bored)\w*",
+    re.IGNORECASE,
+)
+
+
+def is_passing_state(text: str) -> bool:
+    """A feeling pinned to a moment. True for hours, wrong for months."""
+    return bool(_MOMENT.search(text) and _FEELING.search(text))
 
 
 def select(memories: list[Memory], cap: int = DEFAULT_CAP) -> list[Memory]:
@@ -44,12 +59,14 @@ def should_persist(memory: Memory) -> bool:
 
     Passing mood is the case this exists for: "tired today" is true for hours
     and wrong for months, and a memory layer that keeps it tells the model
-    something false every day after.
+    something false every day after. Critical and high still pass, because a
+    person saying something matters more than this heuristic guessing it does
+    not.
     """
     if memory.importance in (Importance.CRITICAL, Importance.HIGH):
         return True
-    if memory.category.value == "ephemeral":
+    if memory.category is Category.EPHEMERAL:
         return True
     if len(memory.content) < 12:
         return False
-    return True
+    return not is_passing_state(memory.content)
