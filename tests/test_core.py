@@ -482,10 +482,25 @@ def test_decay_expires_completed_after_ttl(store):
     m = make("old_goal", status=Status.COMPLETED, updated_at=fixed_past)
     store.upsert(m)
 
-    future = fixed_past.date() + COMPLETED_TTL + timedelta(days=1)
+    future = fixed_past.date() + COMPLETED_TTL
     expired = decay(store, today=future)
     assert expired == 1
     assert store.get("old_goal").status is Status.EXPIRED
+
+
+def test_decay_expires_ephemeral_on_ttl_day(store):
+    from datetime import datetime, timezone
+
+    from loci.core.lifecycle import EPHEMERAL_TTL
+
+    fixed_past = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    m = make("temp_note", category=Category.EPHEMERAL, content="ok", created_at=fixed_past)
+    store.upsert(m)
+
+    today = fixed_past.date() + EPHEMERAL_TTL
+    expired = decay(store, today=today)
+    assert expired == 1
+    assert store.get("temp_note").status is Status.EXPIRED
 
 
 # --- due_for_review via lifecycle module ---
