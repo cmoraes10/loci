@@ -15,6 +15,7 @@ from loci import (
     context_block,
     decay,
     due_for_review,
+    extract,
     heuristic_extract,
     is_passing_state,
     is_safe,
@@ -139,6 +140,25 @@ def test_the_person_outranks_the_heuristic():
 
 
 # --- Heuristics: existing patterns ---
+
+
+def test_extract_delegates_to_model_extractor():
+    calls = []
+
+    def recorder(user, assistant):
+        calls.append((user, assistant))
+        return []
+
+    extract("user text", "assistant text", model_extractor=recorder)
+    assert calls == [("user text", "assistant text")]
+
+
+def test_extract_swallows_model_extractor_exception():
+    def exploder(user, assistant):
+        raise RuntimeError("provider down")
+
+    result = extract("some input", model_extractor=exploder)
+    assert isinstance(result, list)
 
 
 def test_heuristics_find_a_stated_preference():
