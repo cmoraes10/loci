@@ -68,3 +68,6 @@ Thumbs.db
 
 # Claude Code session files — transcripts and local settings are not project artifacts
 .claude/
+
+# Personal learning notes — not part of the published library
+loci-explicado.md
