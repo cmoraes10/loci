@@ -34,7 +34,7 @@ Daily consolidation and decay keep the list honest. Exact duplicates merge;
 guesses nobody confirmed expire on their own; ephemeral facts carry a 24-hour
 TTL; completed goals expire after 90 days.
 
-## The two adapters, and why they differ
+## The two adapters
 
 |  | MCP server | Hermes plugin |
 | --- | --- | --- |
