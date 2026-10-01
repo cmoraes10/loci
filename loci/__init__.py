@@ -10,6 +10,7 @@ from .core import (
     consolidate,
     context_block,
     decay,
+    due_for_review,
     extract,
     heuristic_extract,
     is_passing_state,
@@ -23,6 +24,6 @@ from .core import (
 __all__ = [
     "Category", "Importance", "Memory", "Source", "Status", "Store",
     "extract", "heuristic_extract", "merge_paths",
-    "consolidate", "decay",
+    "consolidate", "decay", "due_for_review",
     "context_block", "review_block", "is_passing_state", "is_safe", "select", "should_persist",
 ]
