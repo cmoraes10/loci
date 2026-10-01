@@ -15,19 +15,24 @@ Ported from the memory system running in production in
 
 ## What it does
 
-- **Typed facts, not a blob.** Eight categories, four importance tiers, a
-  status lifecycle. A preference and a deadline are not the same kind of thing
-  and do not age the same way.
-- **Extraction on two paths.** A model reads the exchange for meaning; regex
-  heuristics catch the phrasings you wrote them for. Merged with model
-  precedence. When the provider is down the regex path still runs.
-- **A write filter.** Most of what a turn produces is not worth keeping.
-  Passing mood is the case this exists for: "tired today" is true for hours and
-  wrong for months.
-- **A cap on injection.** Everything remembered is not everything injected.
-  Twelve facts reach the model, ranked by importance and then recency.
-- **Daily consolidation and decay.** Exact duplicates merge; guesses nobody
-  confirmed expire on their own; ephemeral facts carry a 24-hour TTL.
+Eight categories (routine, study, preferences, finance, goals, relationships,
+constraints, ephemeral), four importance tiers, a status lifecycle. A
+preference and a deadline are not the same kind of thing and do not age
+the same way.
+
+Extraction runs on two paths. A model reads the exchange for meaning; regex
+heuristics catch the phrasings you wrote them for. Merged with model precedence.
+When the provider is down the regex path still runs.
+
+A write filter keeps the store from becoming a mood diary. Passing mood is the
+case it exists for — "tired today" is true for hours and wrong for months.
+
+The injection cap keeps context from growing without bound. Twelve facts reach
+the model, ranked by importance and then by deadline proximity and recency.
+
+Daily consolidation and decay keep the list honest. Exact duplicates merge;
+guesses nobody confirmed expire on their own; ephemeral facts carry a 24-hour
+TTL; completed goals expire after 90 days.
 
 ## The two adapters, and why they differ
 
@@ -51,10 +56,17 @@ pip install -e .            # the core
 pip install -e '.[mcp]'     # plus the MCP server
 ```
 
-MCP client config:
+MCP client config (after `pip install loci[mcp]`):
 
 ```json
-{ "mcpServers": { "loci": { "command": "python", "args": ["adapters/mcp_server/server.py"] } } }
+{
+  "mcpServers": {
+    "loci": {
+      "command": "python",
+      "args": ["-m", "loci.adapters.mcp_server.server"]
+    }
+  }
+}
 ```
 
 Hermes:
@@ -70,7 +82,7 @@ No server to run, because a memory layer that needs one is not installable.
 ## Use it directly
 
 ```python
-from core import Store, extract, should_persist, context_block
+from loci import Store, extract, should_persist, context_block
 
 store = Store()
 for memory in extract("eu prefiro respostas curtas", assistant_text=reply):
@@ -100,7 +112,7 @@ that untrue, it belongs in an adapter.
 just test
 ```
 
-Eleven tests against a real SQLite store on a temp file. Nothing of ours is
+59 tests against a real SQLite store on a temp file. Nothing of ours is
 mocked: a memory layer whose tests pass against a fake store tells you nothing
 about the one people run.
 
