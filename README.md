@@ -2,13 +2,9 @@
 
 Typed long-term memory for AI agents. One core, two adapters.
 
-The name comes from the method of loci — the memory palace technique: every
-recollection gets a place and a structure. That is the thesis of this project.
+The name comes from the method of loci, the ancient memory palace technique where every recollection gets a place and a structure. That is the thesis of this project.
 
-An agent that forgets you every session is a search box with manners. This is
-the layer that fixes that: durable facts about a person, typed and ranked,
-extracted from the conversation rather than typed into a settings page,
-consolidated daily so the list does not rot.
+An agent that forgets you every session is a search box with manners. This is the layer that fixes that: durable facts about a person, typed and ranked, extracted from the conversation rather than typed into a settings page, consolidated daily so the list does not rot.
 
 Ported from the memory system running in production in
 [Lima](https://getlima.app), rewritten host-agnostic.
@@ -25,7 +21,7 @@ heuristics catch the phrasings you wrote them for. Merged with model precedence.
 When the provider is down the regex path still runs.
 
 A write filter keeps the store from becoming a mood diary. Passing mood is the
-case it exists for — "tired today" is true for hours and wrong for months.
+case it exists for. "Tired today" is true for hours and wrong for months.
 
 The injection cap keeps context from growing without bound. Twelve facts reach
 the model, ranked by importance and then by deadline proximity and recency.
@@ -44,7 +40,7 @@ TTL; completed goals expire after 90 days.
 | Context injection | on request | before every call |
 
 MCP is request and response. Nothing calls a server when a turn ends, so there
-is no moment for it to read the exchange on its own — through MCP the agent has
+is no moment for it to read the exchange on its own. Through MCP the agent has
 to call `remember` on purpose. Automatic extraction needs a hook in the host,
 and Hermes has one (`post_llm_call`). Same core underneath; the Hermes adapter
 just has somewhere to stand.
@@ -52,8 +48,8 @@ just has somewhere to stand.
 ## Install
 
 ```sh
-pip install mowave-loci          # the core
-pip install mowave-loci[mcp]     # plus the MCP server
+pip install mowave-loci
+pip install mowave-loci[mcp]
 ```
 
 MCP client config (after `pip install mowave-loci[mcp]`):
@@ -98,7 +94,7 @@ This repo owns the shape of a memory and its lifecycle. It does not own:
 
 | Thing | Owner |
 | --- | --- |
-| Model calls, API keys, provider SDKs | your app — inject a `ModelExtractor` |
+| Model calls, API keys, provider SDKs | your app (inject a `ModelExtractor`) |
 | The agent loop, tool dispatch, sessions | the host (Hermes, OpenClaw, Claude Code) |
 | Scheduling the daily jobs | the host's cron, s6 or systemd |
 | Transport and auth | the adapter |
