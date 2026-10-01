@@ -27,6 +27,7 @@ from loci import (
 # Lazy init for the same reason as the MCP adapter: importing this module
 # must not create a file on disk. Init on first request.
 _store_cache: Store | None = None
+_model_extractor = None  # ModelExtractor | None — injected via register()
 
 
 def _get_store() -> Store:
@@ -90,7 +91,7 @@ def _extract_async(payload: dict) -> dict:
 
     def work() -> None:
         try:
-            for memory in extract(payload.get("user", ""), payload.get("assistant", "")):
+            for memory in extract(payload.get("user", ""), payload.get("assistant", ""), _model_extractor):
                 if should_persist(memory):
                     _get_store().upsert(memory)
         except Exception:  # noqa: BLE001 - never let memory break a turn
@@ -118,7 +119,9 @@ RECALL_SCHEMA = {"type": "object", "properties": {"query": {"type": "string"}}}
 FORGET_SCHEMA = {"type": "object", "properties": {"key": {"type": "string"}}, "required": ["key"]}
 
 
-def register(ctx) -> None:
+def register(ctx, model_extractor=None) -> None:
+    global _model_extractor
+    _model_extractor = model_extractor
     ctx.register_tool(name="remember", toolset="loci", schema=REMEMBER_SCHEMA, handler=_remember)
     ctx.register_tool(name="recall", toolset="loci", schema=RECALL_SCHEMA, handler=_recall)
     ctx.register_tool(name="forget", toolset="loci", schema=FORGET_SCHEMA, handler=_forget)
