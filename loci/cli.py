@@ -29,6 +29,7 @@ def run_maintenance(db_path: str | None = None) -> int:
 def main() -> None:
     # Accept an optional path argument so cron entries can point at a specific db.
     db = sys.argv[1] if len(sys.argv) > 1 else None
+    run_maintenance(db)
     sys.exit(0)
 
 
