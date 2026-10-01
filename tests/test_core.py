@@ -286,6 +286,22 @@ def test_consolidate_removes_exact_duplicates(store):
     assert len(store.active()) == 1
 
 
+def test_consolidate_with_merge_similar_counts_model_merges(store):
+    store.upsert(make("c1", category=Category.STUDY, content="estou aprendendo Python para dados"))
+    store.upsert(make("c2", category=Category.STUDY, content="tenho estudado Python ultimamente"))
+
+    def merge_to_one(group):
+        if len(group) < 2:
+            return group
+        base = group[0]
+        for other in group[1:]:
+            base = base.merge(other)
+        return [base]
+
+    count = consolidate(store, merge_similar=merge_to_one)
+    assert count == 1  # 2 in group, 1 result → 1 merged away
+
+
 def test_decay_expires_an_unconfirmed_hypothesis(store):
     store.upsert(
         make("guess", status=Status.HYPOTHESIS, review_after=date.today() - timedelta(days=1))

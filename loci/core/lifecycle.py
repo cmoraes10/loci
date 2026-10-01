@@ -47,9 +47,11 @@ def consolidate(store: Store, merge_similar: Callable[[list[Memory]], list[Memor
         for category in Category:
             group = store.active(category)
             if len(group) > 1:
-                for merged in merge_similar(group):
-                    merged.source = Source.CONSOLIDATION
-                    store.upsert(merged)
+                results = list(merge_similar(group))
+                for m in results:
+                    m.source = Source.CONSOLIDATION
+                    store.upsert(m)
+                removed += max(0, len(group) - len(results))
     return removed
 
 
