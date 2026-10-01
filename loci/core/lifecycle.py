@@ -11,6 +11,7 @@ from collections.abc import Callable
 from datetime import date, timedelta
 
 from .models import Category, Memory, Source, Status
+from .rank import is_safe
 from .store import Store
 
 # timedelta(days=1) is explicit. timedelta(hours=24).days == 1 by coincidence,
@@ -47,7 +48,7 @@ def consolidate(store: Store, merge_similar: Callable[[list[Memory]], list[Memor
         for category in Category:
             group = store.active(category)
             if len(group) > 1:
-                results = list(merge_similar(group))
+                results = [m for m in merge_similar(group) if is_safe(m)]
                 for m in results:
                     m.source = Source.CONSOLIDATION
                     store.upsert(m)
