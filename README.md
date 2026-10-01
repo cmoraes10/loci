@@ -112,7 +112,7 @@ that untrue, it belongs in an adapter.
 just test
 ```
 
-64 tests against a real SQLite store on a temp file. Nothing of ours is
+66 tests against a real SQLite store on a temp file. Nothing of ours is
 mocked: a memory layer whose tests pass against a fake store tells you nothing
 about the one people run.
 
