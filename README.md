@@ -109,7 +109,7 @@ that untrue, it belongs in an adapter.
 ## Tests
 
 ```sh
-just test
+pytest -q
 ```
 
 66 tests against a real SQLite store on a temp file. Nothing of ours is

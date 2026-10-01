@@ -6,8 +6,12 @@ build-backend = "setuptools.build_meta"
 name = "loci"
 version = "0.1.0"
 description = "Typed long-term memory for AI agents — one core, an MCP server and a Hermes plugin"
+readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
+authors = [
+    {name = "MOWAVE TECNOLOGIA LTDA", email = "eaemoraes123@gmail.com"},
+]
 keywords = ["memory", "agents", "ai", "llm", "mcp"]
 classifiers = [
     "Programming Language :: Python :: 3",
