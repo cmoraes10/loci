@@ -11,6 +11,7 @@ the Hermes adapter adds over this one.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 
@@ -57,7 +58,7 @@ def remember(
 
     try:
         memory = Memory(
-            key=f"{category}_{abs(hash(content)) % 10**10}",
+            key=f"{category}_{hashlib.md5(content.encode()).hexdigest()[:12]}",
             title=content[:80],
             content=content,
             category=Category(category),

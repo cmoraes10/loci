@@ -8,6 +8,7 @@ person waits on.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import threading
@@ -49,7 +50,7 @@ def _remember(args: dict, **_kwargs) -> str:
     category = args.get("category", "preferences")
     try:
         memory = Memory(
-            key=f"{category}_{abs(hash(args['content'])) % 10**10}",
+            key=f"{category}_{hashlib.md5(args['content'].encode()).hexdigest()[:12]}",
             title=args["content"][:80],
             content=args["content"],
             category=Category(category),
