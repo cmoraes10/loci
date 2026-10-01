@@ -70,7 +70,7 @@ def _neutralize_for_prompt(text: str) -> str:
     text = text.replace("</", "< /")
     text = text.replace("<|", "< |")
     text = text.replace("[INST]", "[ INST]").replace("[/INST]", "[ /INST]")
-    text = text.replace("#", "hash ")
+    text = re.sub(r"#+ ", "hash ", text)  # only heading-style: one or more # followed by space
     text = text.replace("```", "'''")  # triple-backtick opens a code block in some Markdown parsers
     text = _ROLE_PREFIX.sub(lambda m: m.group(1) + " ", text)
     return text.strip()
