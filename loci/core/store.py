@@ -130,10 +130,18 @@ class Store:
             sql += " AND category = ?"
             args.append(category.value)
         if limit is not None:
-            # importance sorts alphabetically in ascending importance order
-            # (critical < high < low < medium), so ORDER BY importance ASC
-            # retrieves the most important rows first when a cap is applied.
-            sql += " ORDER BY importance ASC, updated_at DESC LIMIT ?"
+            # Alphabetical order (critical < high < low < medium) does not match
+            # importance rank (critical=0, high=1, medium=2, low=3) — 'low' sorts
+            # before 'medium' alphabetically but is less important. A CASE expression
+            # gives the correct numeric rank so the cap retains the most important rows.
+            sql += (
+                " ORDER BY CASE importance"
+                " WHEN 'critical' THEN 0"
+                " WHEN 'high' THEN 1"
+                " WHEN 'medium' THEN 2"
+                " WHEN 'low' THEN 3"
+                " END ASC, updated_at DESC LIMIT ?"
+            )
             args.append(limit)
         return [_row_to_memory(r) for r in self.db.execute(sql, args)]
 

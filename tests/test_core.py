@@ -676,6 +676,49 @@ def test_context_block_neutralizes_close_tag():
     assert "</tool_use" not in block
 
 
+# --- store.active(limit=...) importance ordering ---
+
+
+def test_active_limit_orders_medium_before_low(store):
+    store.upsert(make("low_fact", Importance.LOW, content="informacao de baixa importancia que nao priorizar aqui"))
+    store.upsert(make("med_fact", Importance.MEDIUM, content="preferencia geral de prioridade media no contexto"))
+    found = store.active(limit=1)
+    assert found and found[0].key == "med_fact"
+
+
+# --- M2: access key camelCase bypass ---
+
+
+def test_is_safe_blocks_camelcase_access_key():
+    m = make("k", content="configure myAccessKey before deployment")
+    assert not is_safe(m)
+
+
+def test_is_safe_blocks_aws_access_key():
+    m = make("k", content="AWS_ACCESS_KEY_ID stored in config file here")
+    assert not is_safe(m)
+
+
+# --- consolidate forgets orphaned originals after merge ---
+
+
+def test_consolidate_forgets_orphaned_originals(store):
+    a = make("orig_a", content="primeiro fato que deve ser mesclado pelo modelo aqui")
+    b = make("orig_b", content="segundo fato que tambem deve ser mesclado junto agora")
+    store.upsert(a)
+    store.upsert(b)
+
+    merged_key = "merged_ab"
+
+    def fake_merge(group):
+        return [make(merged_key, content="fato consolidado a partir de dois anteriores mesclados")]
+
+    consolidate(store, merge_similar=fake_merge)
+    assert store.get("orig_a") is None
+    assert store.get("orig_b") is None
+    assert store.get(merged_key) is not None
+
+
 # --- M2: consolidate does not mutate originals ---
 
 
