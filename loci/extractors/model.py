@@ -208,7 +208,10 @@ def _with_retry(
     assistant_text: str,
     max_attempts: int = 3,
 ) -> list[Memory]:
-    """Exponential backoff on transient failures (429, 5xx). Fail fast on other 4xx."""
+    """Exponential backoff on transient failures (429, 5xx). Fail fast on other 4xx.
+
+    max_attempts=0 still runs once — extraction is best-effort, not optional.
+    """
     for attempt in range(max(max_attempts, 1)):
         try:
             return _parse(_call(config, user_text, assistant_text))
