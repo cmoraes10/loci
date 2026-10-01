@@ -53,8 +53,8 @@ def is_safe(memory: Memory) -> bool:
     for field_value in (memory.content, memory.title):
         if _SECRETISH.search(field_value):
             return False
-    if _SENSITIVE_NUMBER.search(memory.content):
-        return False
+        if _SENSITIVE_NUMBER.search(field_value):
+            return False
     return True
 
 

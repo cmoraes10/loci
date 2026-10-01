@@ -304,6 +304,11 @@ def test_is_safe_blocks_sensitive_number():
     assert not is_safe(m)
 
 
+def test_is_safe_blocks_sensitive_number_in_title():
+    m = make("k", title="conta 12345678 banco", content="conteudo normal sem numeros sensiveis")
+    assert not is_safe(m)
+
+
 def test_is_safe_blocks_secret_in_content():
     m = make("k", content="meu token de acesso e abc123xyz")
     assert not is_safe(m)
