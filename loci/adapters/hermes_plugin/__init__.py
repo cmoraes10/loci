@@ -76,9 +76,8 @@ _ACTIVE_FETCH_MULTIPLIER = 10  # fetch this many × cap candidates so select() c
 
 def _recall(args: dict, **_kwargs) -> str:
     store = _get_store()
-    limit = args.get("limit", _DEFAULT_CAP)
-    found = store.search(args["query"], limit) if args.get("query") else store.active(limit=limit * _ACTIVE_FETCH_MULTIPLIER)
-    return json.dumps({"ok": True, "context": context_block(found, cap=limit)})
+    found = store.search(args["query"], _DEFAULT_CAP) if args.get("query") else store.active(limit=_DEFAULT_CAP * _ACTIVE_FETCH_MULTIPLIER)
+    return json.dumps({"ok": True, "context": context_block(found, cap=_DEFAULT_CAP)})
 
 
 def _forget(args: dict, **_kwargs) -> str:
