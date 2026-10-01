@@ -32,7 +32,8 @@ _STATUS_TIER = {Status.ACTIVE: 0, Status.HYPOTHESIS: 1, Status.COMPLETED: 2, Sta
 # (2000, 5000), and most non-sensitive identifiers fall in that range.
 _SENSITIVE_NUMBER = re.compile(r"\b\d{5,}\b")
 _SECRETISH = re.compile(
-    r"(?<![A-Za-z])(password|senha|token|otp|cvv|secret|api[_\-]?key|access[_\-]?key)(?![A-Za-z])",
+    r"(?<![A-Za-z])(password|senha|token|otp|cvv|secret|access[_\-]?key)(?![A-Za-z])"
+    r"|api[\s_\-]?key",  # no boundary: catches myApiKey, OPENAI_API_KEY, api key (with space)
     re.IGNORECASE,
 )
 # Role-like labels followed by a colon are the classic prompt injection opener.
@@ -68,7 +69,7 @@ def _neutralize_for_prompt(text: str) -> str:
     """
     text = text.replace("\r", " ").replace("\n", " ")
     text = text.replace("---", "—")
-    text = text.replace("</", "< /")
+    text = re.sub(r"<([A-Za-z/])", r"< \1", text)  # neutralize opening and closing XML/HTML tags
     text = text.replace("<|", "< |")
     text = text.replace("[INST]", "[ INST]").replace("[/INST]", "[ /INST]")
     text = re.sub(r"#+ ", "hash ", text)  # only heading-style: one or more # followed by space

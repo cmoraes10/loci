@@ -640,3 +640,60 @@ def test_context_block_neutralizes_triple_backtick():
     m = make("k", content="use ```python to show code```")
     block = context_block([m])
     assert "```" not in block
+
+
+# --- M1: camelCase api key detection ---
+
+
+def test_is_safe_blocks_camelcase_api_key():
+    m = make("k", content="configure myApiKey before the call")
+    assert not is_safe(m)
+
+
+def test_is_safe_blocks_camelcase_api_key_compound():
+    m = make("k", content="openaiApiKey is stored in the env file")
+    assert not is_safe(m)
+
+
+def test_is_safe_blocks_api_key_with_space():
+    m = make("k", content="enter your api key in the config panel")
+    assert not is_safe(m)
+
+
+# --- I2: bare XML/HTML tag neutralization ---
+
+
+def test_context_block_neutralizes_xml_open_tag():
+    m = make("k", content="<script>alert(1)</script> injection attempt")
+    block = context_block([m])
+    assert "<script" not in block
+    assert "< script" in block
+
+
+def test_context_block_neutralizes_close_tag():
+    m = make("k", content="end with </tool_use> tag")
+    block = context_block([m])
+    assert "</tool_use" not in block
+
+
+# --- M2: consolidate does not mutate originals ---
+
+
+def test_consolidate_does_not_mutate_originals(store):
+    from loci.core.models import Source
+
+    m = make("original_source", content="fato com source original que nao deve ser mutado aqui")
+    m = Memory(
+        key=m.key,
+        title=m.title,
+        content=m.content,
+        category=m.category,
+        importance=m.importance,
+        source=Source.USER_MESSAGE,
+        status=m.status,
+        confidence=m.confidence,
+    )
+    store.upsert(m)
+    consolidate(store)
+    original_source = Source.USER_MESSAGE
+    assert m.source is original_source
