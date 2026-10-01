@@ -309,6 +309,11 @@ def test_is_safe_blocks_sensitive_number_in_title():
     assert not is_safe(m)
 
 
+def test_is_safe_blocks_compound_env_var_name():
+    m = make("k", content="my OPENAI_API_KEY is sk-proj-abc123")
+    assert not is_safe(m)
+
+
 def test_is_safe_blocks_secret_in_content():
     m = make("k", content="meu token de acesso e abc123xyz")
     assert not is_safe(m)

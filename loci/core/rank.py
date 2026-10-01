@@ -31,7 +31,7 @@ _STATUS_TIER = {Status.ACTIVE: 0, Status.HYPOTHESIS: 1, Status.COMPLETED: 2, Sta
 # and most personally sensitive sequences — never worth storing.
 _SENSITIVE_NUMBER = re.compile(r"\b\d{4,}\b")
 _SECRETISH = re.compile(
-    r"\b(password|senha|token|otp|cvv|secret|api[_\-]?key|access[_\-]?key)\b",
+    r"(?<![A-Za-z])(password|senha|token|otp|cvv|secret|api[_\-]?key|access[_\-]?key)(?![A-Za-z])",
     re.IGNORECASE,
 )
 # Role-like labels followed by a colon are the classic prompt injection opener.
