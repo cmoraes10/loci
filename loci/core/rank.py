@@ -32,8 +32,9 @@ _STATUS_TIER = {Status.ACTIVE: 0, Status.HYPOTHESIS: 1, Status.COMPLETED: 2, Sta
 # (2000, 5000), and most non-sensitive identifiers fall in that range.
 _SENSITIVE_NUMBER = re.compile(r"\b\d{5,}\b")
 _SECRETISH = re.compile(
-    r"(?<![A-Za-z])(password|senha|token|otp|cvv|secret|access[_\-]?key)(?![A-Za-z])"
-    r"|api[\s_\-]?key",  # no boundary: catches myApiKey, OPENAI_API_KEY, api key (with space)
+    r"(?<![A-Za-z])(password|senha|token|otp|cvv|secret)(?![A-Za-z])"
+    r"|api[\s_\-]?key"        # no boundary: catches myApiKey, OPENAI_API_KEY, api key
+    r"|access[\s_\-]?key",    # no boundary: catches myAccessKey, AWS_ACCESS_KEY, etc.
     re.IGNORECASE,
 )
 # Role-like labels followed by a colon are the classic prompt injection opener.
