@@ -103,6 +103,8 @@ class Memory:
             status=merged_status,
             confidence=max(self.confidence, other.confidence),
             evidence_count=self.evidence_count + 1,
+            # `or` keeps self's deadline when other passes None — a deadline
+            # cannot be cleared through a merge, only by explicit set_status.
             review_after=other.review_after or self.review_after,
             created_at=self.created_at,
             updated_at=_now(),
