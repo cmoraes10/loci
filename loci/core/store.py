@@ -117,13 +117,24 @@ class Store:
         row = self.db.execute("SELECT * FROM memories WHERE key = ?", (key,)).fetchone()
         return _row_to_memory(row) if row else None
 
-    def active(self, category: Category | None = None) -> list[Memory]:
-        """All non-expired memories, including hypotheses and completed ones."""
+    def active(self, category: Category | None = None, limit: int | None = None) -> list[Memory]:
+        """All non-expired memories, including hypotheses and completed ones.
+
+        Pass limit to cap the result set when the caller only needs a bounded
+        slice (e.g. a recall tool that will rank client-side). Omit for full
+        iteration in lifecycle jobs.
+        """
         sql = "SELECT * FROM memories WHERE status != 'expired'"
-        args: list[str] = []
+        args: list = []
         if category:
             sql += " AND category = ?"
             args.append(category.value)
+        if limit is not None:
+            # importance sorts alphabetically in ascending importance order
+            # (critical < high < low < medium), so ORDER BY importance ASC
+            # retrieves the most important rows first when a cap is applied.
+            sql += " ORDER BY importance ASC, updated_at DESC LIMIT ?"
+            args.append(limit)
         return [_row_to_memory(r) for r in self.db.execute(sql, args)]
 
     def due_for_review(self, today: date | None = None) -> list[Memory]:
