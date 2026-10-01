@@ -1,7 +1,7 @@
 """Entry point for the daily maintenance jobs.
 
 Designed to be called by cron, s6, systemd, or any scheduler — one command,
-two jobs, exits with the count of changes made. Zero means the store was clean.
+two jobs. Exits 0 on success, 1 on error.
 """
 
 from __future__ import annotations
@@ -27,7 +27,11 @@ def run_maintenance(db_path: str | None = None) -> int:
 def main() -> None:
     # Accept an optional path argument so cron entries can point at a specific db.
     db = sys.argv[1] if len(sys.argv) > 1 else None
-    run_maintenance(db)
+    try:
+        run_maintenance(db)
+    except Exception as exc:
+        print(f"loci maintenance failed: {exc}", file=sys.stderr)
+        sys.exit(1)
     sys.exit(0)
 
 
