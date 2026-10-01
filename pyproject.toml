@@ -8,14 +8,27 @@ version = "0.1.0"
 description = "Typed long-term memory for AI agents — one core, an MCP server and a Hermes plugin"
 requires-python = ">=3.11"
 license = "MIT"
+keywords = ["memory", "agents", "ai", "llm", "mcp"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/mowavetech/loci"
+Issues = "https://github.com/mowavetech/loci/issues"
 
 [project.scripts]
 loci-maintenance = "loci.cli:main"
 
 [project.optional-dependencies]
 mcp = ["mcp>=1.2"]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "ruff>=0.4"]
 
 [tool.setuptools.packages.find]
 include = ["loci*"]
