@@ -27,9 +27,10 @@ _FEELING = re.compile(
 # Expired memories are never included but the value is here for completeness.
 _STATUS_TIER = {Status.ACTIVE: 0, Status.HYPOTHESIS: 1, Status.COMPLETED: 2, Status.EXPIRED: 3}
 
-# Numbers with 4+ consecutive digits cover card numbers, account numbers, PINs,
-# and most personally sensitive sequences — never worth storing.
-_SENSITIVE_NUMBER = re.compile(r"\b\d{4,}\b")
+# Numbers with 5+ consecutive digits cover account numbers, card prefixes, and OTPs.
+# Four-digit sequences are deliberately allowed — years (2015, 2026), round amounts
+# (2000, 5000), and most non-sensitive identifiers fall in that range.
+_SENSITIVE_NUMBER = re.compile(r"\b\d{5,}\b")
 _SECRETISH = re.compile(
     r"(?<![A-Za-z])(password|senha|token|otp|cvv|secret|api[_\-]?key|access[_\-]?key)(?![A-Za-z])",
     re.IGNORECASE,

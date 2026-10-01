@@ -401,6 +401,11 @@ def test_is_safe_passes_clean_memory():
     assert is_safe(m)
 
 
+def test_is_safe_passes_four_digit_year():
+    m = make("k", content="tenho diabetes tipo 2 desde 2015 sem tratamento")
+    assert is_safe(m)
+
+
 def test_should_persist_blocks_unsafe_memory():
     m = make("k", Importance.CRITICAL, content="token de acesso para o servidor")
     assert not should_persist(m)
