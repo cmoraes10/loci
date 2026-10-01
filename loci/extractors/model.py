@@ -221,7 +221,6 @@ def _with_retry(
             if attempt < max_attempts - 1:
                 time.sleep(2 ** attempt)
     return []
-    return []
 
 
 def build_extractor(

@@ -68,7 +68,7 @@ def decay(
     expired = 0
     for memory in store.active():
         if memory.category is Category.EPHEMERAL:
-            if memory.created_at.date() + timedelta(days=1) < today:
+            if memory.created_at.date() + EPHEMERAL_TTL < today:
                 store.set_status(memory.key, Status.EXPIRED)
                 expired += 1
         elif memory.status is Status.HYPOTHESIS and memory.review_after:
