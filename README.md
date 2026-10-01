@@ -112,7 +112,7 @@ that untrue, it belongs in an adapter.
 pytest -q
 ```
 
-91 tests against a real SQLite store on a temp file. Nothing of ours is
+92 tests against a real SQLite store on a temp file. Nothing of ours is
 mocked: a memory layer whose tests pass against a fake store tells you nothing
 about the one people run.
 
