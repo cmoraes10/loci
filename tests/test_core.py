@@ -14,10 +14,12 @@ from loci import (
     consolidate,
     context_block,
     decay,
+    due_for_review,
     heuristic_extract,
     is_passing_state,
     is_safe,
     merge_paths,
+    review_block,
     select,
     should_persist,
 )
@@ -337,3 +339,170 @@ def test_context_block_strips_llm_delimiters():
     block = context_block([m])
     assert "---" not in block
     assert "[INST]" not in block
+
+
+# --- COMPLETED status ---
+
+
+def test_completed_status_round_trips_through_store(store):
+    store.upsert(make("done", status=Status.COMPLETED))
+    retrieved = store.get("done")
+    assert retrieved is not None
+    assert retrieved.status is Status.COMPLETED
+
+
+def test_merge_completed_wins_over_active():
+    base = make("k", status=Status.ACTIVE)
+    update = make("k", status=Status.COMPLETED, content="meta concluida com sucesso mesmo assim")
+    merged = base.merge(update)
+    assert merged.status is Status.COMPLETED
+
+
+def test_merge_hypothesis_does_not_demote_active():
+    confirmed = make("k", status=Status.ACTIVE)
+    guess = make("k", status=Status.HYPOTHESIS, content="talvez isso seja verdade aqui")
+    merged = confirmed.merge(guess)
+    assert merged.status is Status.ACTIVE
+
+
+def test_merge_hypothesis_does_not_demote_completed():
+    done = make("k", status=Status.COMPLETED)
+    guess = make("k", status=Status.HYPOTHESIS, content="talvez isso seja verdade aqui")
+    merged = done.merge(guess)
+    assert merged.status is Status.COMPLETED
+
+
+def test_context_block_marks_completed():
+    m = make("done_goal", status=Status.COMPLETED, content="lancei o produto no mercado finalmente")
+    block = context_block([m])
+    assert "(completed)" in block
+
+
+# --- Urgency ranking ---
+
+
+def test_urgent_memory_ranks_before_same_importance(store):
+    today = date.today()
+    urgent = make("urgent", Importance.MEDIUM, review_after=today + timedelta(days=3))
+    relaxed = make("relaxed", Importance.MEDIUM)
+    store.upsert(urgent)
+    store.upsert(relaxed)
+    chosen = select(store.active(), cap=2, today=today)
+    assert chosen[0].key == "urgent"
+
+
+def test_context_block_marks_due_today():
+    today = date.today()
+    m = make("due", review_after=today)
+    block = context_block([m], today=today)
+    assert "(due today)" in block
+
+
+def test_context_block_marks_overdue():
+    today = date.today()
+    m = make("overdue", review_after=today - timedelta(days=5))
+    block = context_block([m], today=today)
+    assert "overdue" in block
+
+
+def test_context_block_marks_due_in_n_days():
+    today = date.today()
+    m = make("upcoming", review_after=today + timedelta(days=4))
+    block = context_block([m], today=today)
+    assert "due in 4 days" in block
+
+
+# --- due_for_review ---
+
+
+def test_due_for_review_returns_overdue(store):
+    yesterday = date.today() - timedelta(days=1)
+    store.upsert(make("past_due", review_after=yesterday))
+    due = store.due_for_review()
+    assert any(m.key == "past_due" for m in due)
+
+
+def test_due_for_review_ignores_future(store):
+    tomorrow = date.today() + timedelta(days=1)
+    store.upsert(make("not_yet", review_after=tomorrow))
+    due = store.due_for_review()
+    assert not any(m.key == "not_yet" for m in due)
+
+
+def test_due_for_review_ignores_expired(store):
+    yesterday = date.today() - timedelta(days=1)
+    store.upsert(make("expired_past", review_after=yesterday, status=Status.EXPIRED))
+    due = store.due_for_review()
+    assert not any(m.key == "expired_past" for m in due)
+
+
+# --- review_block ---
+
+
+def test_review_block_returns_empty_when_nothing_due():
+    m = make("future", review_after=date.today() + timedelta(days=10))
+    assert review_block([m]) == ""
+
+
+def test_review_block_shows_overdue_items():
+    today = date.today()
+    overdue = make("pending_check", review_after=today - timedelta(days=2))
+    block = review_block([overdue], today=today)
+    assert "Things to check in on:" in block
+    assert "pending_check" in block or overdue.content in block
+
+
+# --- COMPLETED decay ---
+
+
+def test_decay_expires_completed_after_ttl(store):
+    from datetime import datetime, timezone
+
+    from loci.core.lifecycle import COMPLETED_TTL
+
+    # Fix the updated_at to a known UTC date so the comparison is timezone-independent.
+    fixed_past = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    m = make("old_goal", status=Status.COMPLETED, updated_at=fixed_past)
+    store.upsert(m)
+
+    future = fixed_past.date() + COMPLETED_TTL + timedelta(days=1)
+    expired = decay(store, today=future)
+    assert expired == 1
+    assert store.get("old_goal").status is Status.EXPIRED
+
+
+# --- due_for_review via lifecycle module ---
+
+
+def test_lifecycle_due_for_review_matches_store(store):
+    yesterday = date.today() - timedelta(days=1)
+    store.upsert(make("check_me", review_after=yesterday))
+    result = due_for_review(store)
+    assert any(m.key == "check_me" for m in result)
+
+
+def test_lifecycle_due_for_review_accepts_today_param(store):
+    future = date.today() + timedelta(days=5)
+    store.upsert(make("not_yet_2", review_after=future))
+    assert not due_for_review(store, today=date.today())
+    assert any(m.key == "not_yet_2" for m in due_for_review(store, today=future))
+
+
+# --- Additional coverage for write filter and neutralization ---
+
+
+def test_should_persist_allows_ephemeral_even_when_short():
+    m = make("k", category=Category.EPHEMERAL, content="ok")
+    assert should_persist(m)
+
+
+def test_merge_paths_with_empty_model_side():
+    heuristics = [make("h1"), make("h2")]
+    result = merge_paths([], heuristics)
+    assert {m.key for m in result} == {"h1", "h2"}
+
+
+def test_context_block_neutralizes_triple_backtick():
+    m = make("k", content="use ```python to show code```")
+    block = context_block([m])
+    assert "```" not in block
