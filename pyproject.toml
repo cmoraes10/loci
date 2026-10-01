@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "loci"
+name = "mowave-loci"
 version = "0.1.0"
 description = "Typed long-term memory for AI agents — one core, an MCP server and a Hermes plugin"
 readme = "README.md"
@@ -15,7 +15,6 @@ authors = [
 keywords = ["memory", "agents", "ai", "llm", "mcp"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
