@@ -719,6 +719,18 @@ def test_consolidate_forgets_orphaned_originals(store):
     assert store.get(merged_key) is not None
 
 
+def test_consolidate_preserves_originals_when_all_results_unsafe(store):
+    store.upsert(make("keep_a", content="preferencia geral de usuario sem dados sensiveis"))
+    store.upsert(make("keep_b", content="outra preferencia geral de usuario tambem ok"))
+
+    def unsafe_merge(group):
+        return [make("bad", content="meu token de acesso abc123xyz secreto aqui")]
+
+    consolidate(store, merge_similar=unsafe_merge)
+    assert store.get("keep_a") is not None
+    assert store.get("keep_b") is not None
+
+
 # --- M2: consolidate does not mutate originals ---
 
 
