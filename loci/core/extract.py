@@ -131,6 +131,9 @@ def heuristic_extract(user_text: str) -> list[Memory]:
     for pattern, category, importance in HEURISTICS:
         for match in re.finditer(pattern, user_text, flags=re.IGNORECASE):
             phrase = match.group(0).strip().rstrip(".,;")
+            # group(1) is the captured noun/phrase — used for the key so that
+            # "I decided to use Postgres" and "decidi usar Postgres" converge on
+            # the same key. group(0) is the full sentence, stored as the content.
             found.append(
                 Memory(
                     key=f"{category.value}_{_slug(match.group(1))}",
