@@ -33,6 +33,7 @@ import urllib.error
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import date
 from typing import Any
 
 from loci.core.models import Category, Importance, Memory, Source, Status
@@ -42,7 +43,9 @@ You are a memory extraction assistant. Given a conversation exchange, identify
 facts worth remembering long-term about the user.
 
 Respond with valid JSON only, no markdown fences, using this exact shape:
-{"facts": [{"key": "unique_slug_under_48_chars", "title": "Short label (max 80 chars)", "content": "Full statement as a sentence (max 220 chars)", "category": "preferences", "importance": "medium"}]}
+{"facts": [{"key": "unique_slug_under_48_chars", "title": "Short label (max 80 chars)", "content": "Full statement as a sentence (max 220 chars)", "category": "preferences", "importance": "medium", "review_after": null}]}
+
+review_after: ISO date string (YYYY-MM-DD) if the fact has a deadline or should be revisited, otherwise null.
 
 Valid category values: routine, study, preferences, finance, goals, relationships, constraints, ephemeral
 Valid importance values: critical, high, medium, low
@@ -174,6 +177,13 @@ def _parse(raw: dict[str, Any]) -> list[Memory]:
             imp = Importance(f["importance"] if f.get("importance") in _VALID_IMPORTANCE else "medium")
             key = str(f.get("key", ""))[:48] or "model_fact"
             imp = _enforce_min_importance(cat, imp, key)
+            parsed_date: date | None = None
+            raw_date = f.get("review_after")
+            if isinstance(raw_date, str):
+                try:
+                    parsed_date = date.fromisoformat(raw_date)
+                except ValueError:
+                    pass
             memories.append(
                 Memory(
                     key=key,
@@ -184,6 +194,7 @@ def _parse(raw: dict[str, Any]) -> list[Memory]:
                     source=Source.ASSISTANT_INFERENCE,
                     status=Status.HYPOTHESIS,
                     confidence=0.8,
+                    review_after=parsed_date,
                 )
             )
         except (KeyError, ValueError):
@@ -209,6 +220,7 @@ def _with_retry(
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
             if attempt < max_attempts - 1:
                 time.sleep(2 ** attempt)
+    return []
     return []
 
 
