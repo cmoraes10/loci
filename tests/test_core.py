@@ -457,6 +457,13 @@ def test_review_block_shows_overdue_items():
     assert "pending_check" in block or overdue.content in block
 
 
+def test_review_block_marks_hypothesis_as_unconfirmed():
+    today = date.today()
+    guess = make("unverified_goal", status=Status.HYPOTHESIS, review_after=today - timedelta(days=1))
+    block = review_block([guess], today=today)
+    assert "(unconfirmed)" in block
+
+
 # --- COMPLETED decay ---
 
 

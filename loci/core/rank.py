@@ -177,8 +177,11 @@ def review_block(memories: list[Memory], today: date | None = None) -> str:
     due.sort(key=lambda m: (m.review_after, m.importance.rank))
     lines = ["Things to check in on:"]
     for m in due:
-        label = _deadline_label(m, today)
-        lines.append(f"- [{m.category.value}] {_neutralize_for_prompt(m.content)}{label}")
+        if m.status is Status.HYPOTHESIS:
+            mark = " (unconfirmed)"
+        else:
+            mark = _deadline_label(m, today)
+        lines.append(f"- [{m.category.value}] {_neutralize_for_prompt(m.content)}{mark}")
     return "\n".join(lines)
 
 
