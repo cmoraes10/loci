@@ -142,11 +142,12 @@ class Store:
         A few hundred short facts fit in one pass, and a vector store turns an
         installable library into a service someone has to run.
         """
-        like = f"%{text.lower()}%"
+        escaped = text.lower().replace("!", "!!").replace("%", "!%").replace("_", "!_")
+        like = f"%{escaped}%"
         rows = self.db.execute(
             """SELECT * FROM memories
                WHERE status != 'expired'
-                 AND (lower(title) LIKE ? OR lower(content) LIKE ?)
+                 AND (lower(title) LIKE ? ESCAPE '!' OR lower(content) LIKE ? ESCAPE '!')
                LIMIT ?""",
             (like, like, limit),
         )

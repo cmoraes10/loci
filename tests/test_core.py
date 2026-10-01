@@ -62,6 +62,35 @@ def test_merge_keeps_the_stronger_importance(store):
     assert merged.importance is Importance.CRITICAL
 
 
+# --- Store primitives ---
+
+
+def test_search_finds_substring_match(store):
+    store.upsert(make("searchme", content="prefiro trabalhar remotamente todo dia"))
+    found = store.search("remotamente")
+    assert any(m.key == "searchme" for m in found)
+
+
+def test_search_does_not_treat_percent_as_wildcard(store):
+    store.upsert(make("goal_100", content="quero atingir 100% de cobertura nos testes"))
+    store.upsert(make("other", content="conteudo sem percentual aqui dentro"))
+    found = store.search("100%")
+    assert any(m.key == "goal_100" for m in found)
+    assert not any(m.key == "other" for m in found)
+
+
+def test_forget_removes_the_row(store):
+    store.upsert(make("gone"))
+    assert store.forget("gone") is True
+    assert store.get("gone") is None
+
+
+def test_set_status_changes_status(store):
+    store.upsert(make("changeable"))
+    store.set_status("changeable", Status.EXPIRED)
+    assert store.get("changeable").status is Status.EXPIRED
+
+
 # --- Ranking and injection ---
 
 
