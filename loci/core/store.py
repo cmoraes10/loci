@@ -69,6 +69,12 @@ class Store:
     def close(self) -> None:
         self.db.close()
 
+    def __enter__(self) -> "Store":
+        return self
+
+    def __exit__(self, *_) -> None:
+        self.close()
+
     def __del__(self) -> None:
         try:
             self.db.close()

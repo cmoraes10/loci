@@ -30,6 +30,13 @@ def store(tmp_path):
     return Store(tmp_path / "test.db")
 
 
+def test_store_context_manager_closes_and_persists(tmp_path):
+    with Store(tmp_path / "ctx.db") as s:
+        s.upsert(make("cm_key"))
+    with Store(tmp_path / "ctx.db") as s2:
+        assert s2.get("cm_key") is not None
+
+
 def make(key: str, importance=Importance.MEDIUM, **kw) -> Memory:
     return Memory(
         key=key,
