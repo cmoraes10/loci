@@ -23,18 +23,39 @@ from loci import (
     should_persist,
 )
 
-_store = Store(os.environ.get("LOCI_DB", "~/.loci/memory.db"))
+# Lazy init for the same reason as the MCP adapter: importing this module
+# must not create a file on disk. Init on first request.
+_store_cache: Store | None = None
+
+
+def _get_store() -> Store:
+    global _store_cache
+    if _store_cache is None:
+        _store_cache = Store(os.environ.get("LOCI_DB", "~/.loci/memory.db"))
+    return _store_cache
 
 
 def _remember(args: dict, **_kwargs) -> str:
+    from datetime import date as _date
+
+    parsed_date: _date | None = None
+    raw_date = args.get("review_after", "")
+    if raw_date:
+        try:
+            parsed_date = _date.fromisoformat(raw_date)
+        except ValueError:
+            return json.dumps({"ok": False, "error": f"invalid review_after: {raw_date!r}"})
+
+    category = args.get("category", "preferences")
     try:
         memory = Memory(
-            key=f"{args['category']}_{abs(hash(args['content'])) % 10**10}",
+            key=f"{category}_{abs(hash(args['content'])) % 10**10}",
             title=args["content"][:80],
             content=args["content"],
-            category=Category(args.get("category", "preferences")),
+            category=Category(category),
             importance=Importance(args.get("importance", "medium")),
             source=Source.USER_MESSAGE,
+            review_after=parsed_date,
         )
     except (KeyError, ValueError) as exc:
         # A typed error back to the model, not an exception. The loop recovers
@@ -42,21 +63,22 @@ def _remember(args: dict, **_kwargs) -> str:
         return json.dumps({"ok": False, "error": str(exc)})
     if not should_persist(memory):
         return json.dumps({"ok": True, "stored": False})
-    return json.dumps({"ok": True, "key": _store.upsert(memory).key})
+    return json.dumps({"ok": True, "key": _get_store().upsert(memory).key})
 
 
 def _recall(args: dict, **_kwargs) -> str:
-    found = _store.search(args["query"]) if args.get("query") else _store.active()
+    store = _get_store()
+    found = store.search(args["query"]) if args.get("query") else store.active()
     return json.dumps({"ok": True, "context": context_block(found)})
 
 
 def _forget(args: dict, **_kwargs) -> str:
-    return json.dumps({"ok": True, "removed": _store.forget(args.get("key", ""))})
+    return json.dumps({"ok": True, "removed": _get_store().forget(args.get("key", ""))})
 
 
 def _inject_context(payload: dict) -> dict:
     """Eager injection into the system instruction, capped and ranked."""
-    block = context_block(_store.active())
+    block = context_block(_get_store().active())
     if block:
         payload["system"] = f"{payload.get('system', '')}\n\n{block}".strip()
     return payload
@@ -69,7 +91,7 @@ def _extract_async(payload: dict) -> dict:
         try:
             for memory in extract(payload.get("user", ""), payload.get("assistant", "")):
                 if should_persist(memory):
-                    _store.upsert(memory)
+                    _get_store().upsert(memory)
         except Exception:  # noqa: BLE001 - never let memory break a turn
             pass
 
@@ -83,6 +105,11 @@ REMEMBER_SCHEMA = {
         "content": {"type": "string", "maxLength": 220},
         "category": {"type": "string", "enum": [c.value for c in Category]},
         "importance": {"type": "string", "enum": [i.value for i in Importance]},
+        "review_after": {
+            "type": "string",
+            "pattern": r"^\d{4}-\d{2}-\d{2}$",
+            "description": "ISO date (YYYY-MM-DD) — when to revisit this fact. Omit if no deadline.",
+        },
     },
     "required": ["content"],
 }

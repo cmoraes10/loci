@@ -19,16 +19,42 @@ from mcp.server.fastmcp import FastMCP
 from loci import Category, Importance, Memory, Source, Store, context_block, should_persist
 
 mcp = FastMCP("loci")
-store = Store(os.environ.get("LOCI_DB", "~/.loci/memory.db"))
+
+# Lazy init: module-level Store at import time would write ~/.loci/memory.db
+# unconditionally — e.g. when a test imports the module. Init on first use.
+_store_cache: Store | None = None
+
+
+def _get_store() -> Store:
+    global _store_cache
+    if _store_cache is None:
+        _store_cache = Store(os.environ.get("LOCI_DB", "~/.loci/memory.db"))
+    return _store_cache
 
 
 @mcp.tool()
-def remember(content: str, category: str = "preferences", importance: str = "medium") -> str:
+def remember(
+    content: str,
+    category: str = "preferences",
+    importance: str = "medium",
+    review_after: str = "",
+) -> str:
     """Store one durable fact about the user.
 
     Use for things that stay true for weeks: a preference, a constraint, a
     decision and its reason, a deadline. Not for what is true only today.
+
+    review_after: optional ISO date (YYYY-MM-DD) — when to revisit this fact.
     """
+    from datetime import date as _date
+
+    parsed_date: _date | None = None
+    if review_after:
+        try:
+            parsed_date = _date.fromisoformat(review_after)
+        except ValueError:
+            return json.dumps({"ok": False, "error": f"invalid review_after date: {review_after!r}"})
+
     try:
         memory = Memory(
             key=f"{category}_{abs(hash(content)) % 10**10}",
@@ -37,19 +63,21 @@ def remember(content: str, category: str = "preferences", importance: str = "med
             category=Category(category),
             importance=Importance(importance),
             source=Source.USER_MESSAGE,
+            review_after=parsed_date,
         )
     except ValueError as exc:
         return json.dumps({"ok": False, "error": str(exc)})
 
     if not should_persist(memory):
         return json.dumps({"ok": True, "stored": False, "reason": "below the write filter"})
-    saved = store.upsert(memory)
+    saved = _get_store().upsert(memory)
     return json.dumps({"ok": True, "stored": True, "key": saved.key})
 
 
 @mcp.tool()
 def recall(query: str = "", limit: int = 12) -> str:
     """Retrieve what is known about the user, optionally filtered by a query."""
+    store = _get_store()
     found = store.search(query, limit) if query else store.active()
     return json.dumps({"ok": True, "context": context_block(found, cap=limit)})
 
@@ -57,7 +85,7 @@ def recall(query: str = "", limit: int = 12) -> str:
 @mcp.tool()
 def forget(key: str) -> str:
     """Remove one stored fact by key. Use when the user asks you to forget it."""
-    return json.dumps({"ok": True, "removed": store.forget(key)})
+    return json.dumps({"ok": True, "removed": _get_store().forget(key)})
 
 
 if __name__ == "__main__":
