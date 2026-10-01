@@ -52,6 +52,12 @@ def consolidate(store: Store, merge_similar: Callable[[list[Memory]], list[Memor
                 results = [m for m in merge_similar(group) if is_safe(m)]
                 for m in results:
                     store.upsert(dataclasses.replace(m, source=Source.CONSOLIDATION))
+                # Forget originals whose keys did not survive into the result set.
+                # Without this, inputs merged into a new key would remain as orphans.
+                result_keys = {m.key for m in results}
+                for orig in group:
+                    if orig.key not in result_keys:
+                        store.forget(orig.key)
                 removed += max(0, len(group) - len(results))
     return removed
 
