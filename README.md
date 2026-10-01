@@ -52,11 +52,11 @@ just has somewhere to stand.
 ## Install
 
 ```sh
-pip install -e .            # the core
-pip install -e '.[mcp]'     # plus the MCP server
+pip install mowave-loci          # the core
+pip install mowave-loci[mcp]     # plus the MCP server
 ```
 
-MCP client config (after `pip install loci[mcp]`):
+MCP client config (after `pip install mowave-loci[mcp]`):
 
 ```json
 {
