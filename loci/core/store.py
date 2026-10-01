@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from .models import Category, Importance, Memory, Source, Status
@@ -29,6 +29,18 @@ CREATE INDEX IF NOT EXISTS idx_review_after ON memories (review_after);
 """
 
 
+def _parse_dt(value: str) -> datetime:
+    """Read an ISO datetime and guarantee it is UTC-aware.
+
+    Rows written before the +00:00 suffix was enforced would be naive strings.
+    Adding the timezone here rather than at write time avoids a migration.
+    """
+    dt = datetime.fromisoformat(value)
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 def _row_to_memory(row: sqlite3.Row) -> Memory:
     return Memory(
         key=row["key"],
@@ -41,8 +53,8 @@ def _row_to_memory(row: sqlite3.Row) -> Memory:
         confidence=row["confidence"],
         evidence_count=row["evidence_count"],
         review_after=date.fromisoformat(row["review_after"]) if row["review_after"] else None,
-        created_at=datetime.fromisoformat(row["created_at"]),
-        updated_at=datetime.fromisoformat(row["updated_at"]),
+        created_at=_parse_dt(row["created_at"]),
+        updated_at=_parse_dt(row["updated_at"]),
     )
 
 
@@ -53,6 +65,15 @@ class Store:
         self.db = sqlite3.connect(self.path)
         self.db.row_factory = sqlite3.Row
         self.db.executescript(SCHEMA)
+
+    def close(self) -> None:
+        self.db.close()
+
+    def __del__(self) -> None:
+        try:
+            self.db.close()
+        except Exception:  # noqa: BLE001
+            pass
 
     def upsert(self, memory: Memory) -> Memory:
         """Write, merging into an existing key rather than duplicating it."""
@@ -91,12 +112,29 @@ class Store:
         return _row_to_memory(row) if row else None
 
     def active(self, category: Category | None = None) -> list[Memory]:
+        """All non-expired memories, including hypotheses and completed ones."""
         sql = "SELECT * FROM memories WHERE status != 'expired'"
         args: list[str] = []
         if category:
             sql += " AND category = ?"
             args.append(category.value)
         return [_row_to_memory(r) for r in self.db.execute(sql, args)]
+
+    def due_for_review(self, today: date | None = None) -> list[Memory]:
+        """Memories that asked to be checked — deadlines that arrived, commitments to revisit.
+
+        These are the facts that hold the person accountable. An agent that surfaces them
+        proactively is doing something a search box cannot.
+        """
+        today = today or date.today()
+        rows = self.db.execute(
+            """SELECT * FROM memories
+               WHERE status IN ('active', 'hypothesis')
+                 AND review_after IS NOT NULL
+                 AND review_after <= ?""",
+            (today.isoformat(),),
+        )
+        return [_row_to_memory(r) for r in rows]
 
     def search(self, text: str, limit: int = 20) -> list[Memory]:
         """Substring match. Deliberately not embeddings.
