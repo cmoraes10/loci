@@ -70,10 +70,15 @@ def _remember(args: dict, **_kwargs) -> str:
     return json.dumps({"ok": True, "key": _get_store().upsert(memory).key})
 
 
+_DEFAULT_CAP = 12
+_ACTIVE_FETCH_MULTIPLIER = 10  # fetch this many × cap candidates so select() can rank properly
+
+
 def _recall(args: dict, **_kwargs) -> str:
     store = _get_store()
-    found = store.search(args["query"]) if args.get("query") else store.active()
-    return json.dumps({"ok": True, "context": context_block(found)})
+    limit = args.get("limit", _DEFAULT_CAP)
+    found = store.search(args["query"], limit) if args.get("query") else store.active(limit=limit * _ACTIVE_FETCH_MULTIPLIER)
+    return json.dumps({"ok": True, "context": context_block(found, cap=limit)})
 
 
 def _forget(args: dict, **_kwargs) -> str:
@@ -82,7 +87,7 @@ def _forget(args: dict, **_kwargs) -> str:
 
 def _inject_context(payload: dict) -> dict:
     """Eager injection into the system instruction, capped and ranked."""
-    block = context_block(_get_store().active())
+    block = context_block(_get_store().active(limit=_DEFAULT_CAP * _ACTIVE_FETCH_MULTIPLIER))
     if block:
         payload["system"] = f"{payload.get('system', '')}\n\n{block}".strip()
     return payload
