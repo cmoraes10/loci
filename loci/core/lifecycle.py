@@ -74,6 +74,9 @@ def decay(
                 store.set_status(memory.key, Status.EXPIRED)
                 expired += 1
         elif memory.status is Status.HYPOTHESIS and memory.review_after:
+            # Strict less-than: on the review_after day the memory surfaces in
+            # due_for_review, giving the agent one day to confirm it. It expires
+            # the day after if nobody acted on it.
             if memory.review_after < today:
                 store.set_status(memory.key, Status.EXPIRED)
                 expired += 1

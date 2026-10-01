@@ -330,6 +330,14 @@ def test_decay_expires_an_unconfirmed_hypothesis(store):
     assert store.get("guess").status is Status.EXPIRED
 
 
+def test_decay_does_not_expire_hypothesis_on_review_day(store):
+    today = date.today()
+    store.upsert(make("due_today", status=Status.HYPOTHESIS, review_after=today))
+    assert decay(store, today=today) == 0
+    assert store.get("due_today").status is Status.HYPOTHESIS
+    assert any(m.key == "due_today" for m in store.due_for_review(today))
+
+
 def test_decay_leaves_a_confirmed_fact_alone(store):
     store.upsert(make("solid", status=Status.ACTIVE))
     assert decay(store) == 0
