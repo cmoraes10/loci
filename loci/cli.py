@@ -15,12 +15,10 @@ from .core.store import Store
 
 def run_maintenance(db_path: str | None = None) -> int:
     path = db_path or os.environ.get("LOCI_DB", "~/.loci/memory.db")
-    store = Store(path)
-
-    merged = consolidate(store)
-    expired = decay(store)
+    with Store(path) as store:
+        merged = consolidate(store)
+        expired = decay(store)
     total = merged + expired
-
     if total:
         print(f"loci maintenance: {merged} merged, {expired} expired")
     return total

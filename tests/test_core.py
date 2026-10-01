@@ -31,6 +31,11 @@ def store(tmp_path):
     return Store(tmp_path / "test.db")
 
 
+def test_run_maintenance_returns_zero_on_empty_store(tmp_path):
+    from loci.cli import run_maintenance
+    assert run_maintenance(str(tmp_path / "maint.db")) == 0
+
+
 def test_store_context_manager_closes_and_persists(tmp_path):
     with Store(tmp_path / "ctx.db") as s:
         s.upsert(make("cm_key"))
