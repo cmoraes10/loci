@@ -11,6 +11,7 @@ the Hermes adapter adds over this one.
 
 from __future__ import annotations
 
+import atexit
 import hashlib
 import json
 import os
@@ -30,6 +31,7 @@ def _get_store() -> Store:
     global _store_cache
     if _store_cache is None:
         _store_cache = Store(os.environ.get("LOCI_DB", "~/.loci/memory.db"))
+        atexit.register(_store_cache.close)
     return _store_cache
 
 
@@ -79,7 +81,9 @@ def remember(
 def recall(query: str = "", limit: int = 12) -> str:
     """Retrieve what is known about the user, optionally filtered by a query."""
     store = _get_store()
-    found = store.search(query, limit) if query else store.active()
+    # No-query path passes limit * 10 so context_block can rank across a wider
+    # candidate set without loading the entire store.
+    found = store.search(query, limit) if query else store.active(limit=limit * 10)
     return json.dumps({"ok": True, "context": context_block(found, cap=limit)})
 
 

@@ -8,6 +8,7 @@ person waits on.
 
 from __future__ import annotations
 
+import atexit
 import hashlib
 import json
 import os
@@ -34,6 +35,7 @@ def _get_store() -> Store:
     global _store_cache
     if _store_cache is None:
         _store_cache = Store(os.environ.get("LOCI_DB", "~/.loci/memory.db"))
+        atexit.register(_store_cache.close)
     return _store_cache
 
 
