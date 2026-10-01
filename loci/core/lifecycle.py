@@ -7,6 +7,7 @@ and the cap starts dropping good facts to make room for stale ones.
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Callable
 from datetime import date, timedelta
 
@@ -50,8 +51,7 @@ def consolidate(store: Store, merge_similar: Callable[[list[Memory]], list[Memor
             if len(group) > 1:
                 results = [m for m in merge_similar(group) if is_safe(m)]
                 for m in results:
-                    m.source = Source.CONSOLIDATION
-                    store.upsert(m)
+                    store.upsert(dataclasses.replace(m, source=Source.CONSOLIDATION))
                 removed += max(0, len(group) - len(results))
     return removed
 
