@@ -11,6 +11,8 @@ build/
 .eggs/
 pip-wheel-metadata/
 *.whl
+*.tar.gz
+*.zip
 
 # Virtual environments
 .venv/
@@ -44,10 +46,16 @@ pyrightconfig.json
 *.swo
 *~
 
+# Version managers
+.python-version
+
 # macOS
 .DS_Store
 .AppleDouble
 .LSOverride
+
+# Windows
+Thumbs.db
 
 # Linux
 .fuse_hidden*
