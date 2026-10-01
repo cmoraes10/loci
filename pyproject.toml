@@ -24,8 +24,8 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/mowavetech/loci"
-Issues = "https://github.com/mowavetech/loci/issues"
+Homepage = "https://github.com/cmoraes10/loci"
+Issues = "https://github.com/cmoraes10/loci/issues"
 
 [project.scripts]
 loci-maintenance = "loci.cli:main"
