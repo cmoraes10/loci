@@ -71,6 +71,7 @@ def _neutralize_for_prompt(text: str) -> str:
     text = text.replace("<|", "< |")
     text = text.replace("[INST]", "[ INST]").replace("[/INST]", "[ /INST]")
     text = text.replace("#", "hash ")
+    text = text.replace("```", "'''")  # triple-backtick opens a code block in some Markdown parsers
     text = _ROLE_PREFIX.sub(lambda m: m.group(1) + " ", text)
     return text.strip()
 
@@ -80,10 +81,11 @@ def _urgency_boost(m: Memory, today: date) -> int:
 
     A deadline due in three days should surface before a same-importance fact
     with no time pressure — 0 sorts before 1, so the urgent item wins the tie.
+    Hypotheses are included: an unconfirmed allergy due tomorrow is still urgent.
     """
     if (
         m.review_after is not None
-        and m.status is Status.ACTIVE
+        and m.status in (Status.ACTIVE, Status.HYPOTHESIS)
         and m.review_after <= today + _URGENCY_WINDOW
     ):
         return 0
@@ -145,6 +147,8 @@ def context_block(
     lines = ["What you know about this person:"]
     for m in chosen:
         if m.status is Status.HYPOTHESIS:
+            # Deadline label is dropped for hypotheses — showing (unconfirmed) keeps
+            # the reader aware that the fact is not yet verified, which matters more.
             mark = " (unconfirmed)"
         elif m.status is Status.COMPLETED:
             mark = " (completed)"

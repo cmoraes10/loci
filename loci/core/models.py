@@ -33,7 +33,8 @@ class Importance(str, Enum):
 class Status(str, Enum):
     ACTIVE = "active"
     HYPOTHESIS = "hypothesis"
-    EXPIRED = "expired"
+    COMPLETED = "completed"  # a goal or task was accomplished — semantically different from expired
+    EXPIRED = "expired"      # ran out of time, was never confirmed, or became false
 
 
 class Source(str, Enum):
@@ -78,15 +79,28 @@ class Memory:
         self.content = self.content.strip()[:CONTENT_MAX]
 
     def merge(self, other: "Memory") -> "Memory":
-        """Same key seen again. Keep the newer wording, raise the evidence."""
+        """Same key seen again. Keep the newer wording, raise the evidence.
+
+        Status follows a simple promotion rule: COMPLETED wins over ACTIVE
+        (the person said they finished it), but HYPOTHESIS cannot demote
+        something already confirmed — an unconfirmed extraction does not
+        override a known fact.
+        """
+        if other.status is Status.COMPLETED:
+            merged_status = Status.COMPLETED
+        elif other.status is Status.ACTIVE and self.status is not Status.COMPLETED:
+            merged_status = Status.ACTIVE
+        else:
+            merged_status = self.status
+
         return Memory(
             key=self.key,
             title=other.title or self.title,
             content=other.content or self.content,
             category=other.category,
-            importance=min(self.importance, other.importance, key=lambda i: i.rank),
+            importance=min(self.importance, other.importance, key=lambda i: i.rank),  # min rank = highest importance (CRITICAL=0)
             source=other.source,
-            status=Status.ACTIVE if other.status is Status.ACTIVE else self.status,
+            status=merged_status,
             confidence=max(self.confidence, other.confidence),
             evidence_count=self.evidence_count + 1,
             review_after=other.review_after or self.review_after,
